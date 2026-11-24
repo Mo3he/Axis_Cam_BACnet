@@ -23,8 +23,11 @@
       ],
       "paramConfig": [
         { "name": "Enabled", "default": "no", "type": "bool:no,yes" },
-        { "name": "ServerUrl", "default": "", "type": "string" },
-        { "name": "ApiKey", "default": "", "type": "password" }
+        { "name": "DeviceInstance", "default": "", "type": "string" },
+        { "name": "DeviceName", "default": "", "type": "string" },
+        { "name": "UdpPort", "default": "47808", "type": "int:min=1024,max=65535" },
+        { "name": "Location", "default": "", "type": "string" },
+        { "name": "Description", "default": "", "type": "string" }
       ]
     }
   }

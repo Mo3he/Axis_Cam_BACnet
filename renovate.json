@@ -1,14 +1,20 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended"
+  ],
   "dependencyDashboard": true,
   "prConcurrentLimit": 3,
   "prHourlyLimit": 0,
-  "schedule": ["before 5am on Monday"],
+  "schedule": [
+    "before 5am on Monday"
+  ],
   "packageRules": [
     {
       "description": "An SDK bump raises the package's minimum AXIS OS, so decide it deliberately.",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "matchPackageNames": [
         "axisecp/acap-native-sdk",
         "axisecp/acap-sdk",
@@ -19,29 +25,54 @@
     },
     {
       "description": "Hold the SDK on its current minor (12.10.x). 12.11+ raises the AXIS OS floor (12.11.147), so remove this rule only when deliberately moving up.",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "matchPackageNames": [
         "axisecp/acap-native-sdk",
         "axisecp/acap-sdk",
         "docker.io/axisecp/acap-native-sdk",
         "docker.io/axisecp/acap-sdk"
       ],
-      "matchUpdateTypes": ["major", "minor"],
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ],
       "enabled": false
     },
     {
       "description": "Transitive Go modules are off by default; enable so CVE fixes can land.",
-      "matchManagers": ["gomod"],
-      "matchDepTypes": ["indirect"],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
       "enabled": true,
       "groupName": "Go indirect dependencies",
       "groupSlug": "go-indirect-dependencies"
     },
     {
       "description": "gvisor is only go-gettable from its generated 'go' branch. Master pseudo-versions ship test files that collide with the package they sit in (found packages stack and bridge in pkg/tcpip/stack), so an automated bump always breaks the build.",
-      "matchManagers": ["gomod"],
-      "matchPackageNames": ["gvisor.dev/gvisor"],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchPackageNames": [
+        "gvisor.dev/gvisor"
+      ],
       "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "bacnet-stack is built from its release tarball in the Dockerfile. The PR bumps the version only: update BACNET_STACK_SHA256 by hand (the build fails its checksum check until then), and re-check docs/PICS.md.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+)(?: registryUrl=(?<registryUrl>\\S+))? depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?\\nARG \\w+_VERSION=(?<currentValue>\\S+)"
+      ]
     }
   ]
 }

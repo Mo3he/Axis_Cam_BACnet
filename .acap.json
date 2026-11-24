@@ -1,0 +1,16 @@
+{
+  "app": "BACnet_Server",
+  "friendlyName": "BACnet Server",
+  "versionPolicy": "patch",
+  "upstream": {
+    "type": "none",
+    "note": "bacnet-stack is pinned in the Dockerfile and updated by Renovate. Releases are cut manually with workflow_dispatch."
+  },
+  "build": {
+    "command": "./build.sh",
+    "env": {}
+  },
+  "signing": {
+    "skip": []
+  }
+}
