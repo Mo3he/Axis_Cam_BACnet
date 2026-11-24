@@ -1,6 +1,6 @@
 # BACnet ACAP for Axis Cameras
 
-[![Release](https://img.shields.io/github/v/release/Mo3he/Axis_Cam_BACnet?style=flat)](https://github.com/Mo3he/Axis_Cam_BACnet/releases)
+[![Release](https://img.shields.io/github/v/release/Mo3he/Axis_Cam_BACnet?style=flat&include_prereleases)](https://github.com/Mo3he/Axis_Cam_BACnet/releases)
 [![Build](https://github.com/Mo3he/Axis_Cam_BACnet/actions/workflows/build.yml/badge.svg)](https://github.com/Mo3he/Axis_Cam_BACnet/actions/workflows/build.yml)
 [![License](https://img.shields.io/github/license/Mo3he/Axis_Cam_BACnet?style=flat)](LICENSE)
 [![Super-Linter](https://github.com/Mo3he/Axis_Cam_BACnet/actions/workflows/super-linter.yml/badge.svg)](https://github.com/Mo3he/Axis_Cam_BACnet/actions/workflows/super-linter.yml)
