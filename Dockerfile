@@ -27,12 +27,20 @@ RUN mkdir -p /opt/bacnet-stack && \
     . /opt/axis/acapsdk/environment-setup* && \
     make -s -C /opt/bacnet-stack/apps lib BACDL=bip BBMD=none BACNET_PORT=linux CC="$CC" AR="$AR" >/dev/null
 
+# Vendor identifier and name reported by the Device object (docs/PICS.md).
+ARG BACNET_VENDOR_ID=260
+ARG BACNET_VENDOR_NAME="BACnet Stack at SourceForge"
+RUN case "${BACNET_VENDOR_ID}" in ''|*[!0-9]*) echo "BACNET_VENDOR_ID must be a number" >&2; exit 1 ;; esac && \
+    [ "${BACNET_VENDOR_ID}" -le 65535 ] || { echo "BACNET_VENDOR_ID must be 0 to 65535" >&2; exit 1; }
+
 COPY app /opt/app/
 COPY LICENSE /opt/app/LICENSE
 WORKDIR /opt/app
 RUN sed -i "s/\"BUILDARCH\"/\"${ARCH}\"/" manifest.json && \
     find . -name .DS_Store -delete && \
-    . /opt/axis/acapsdk/environment-setup* && acap-build ./ -a THIRD_PARTY_LICENSES.txt
+    . /opt/axis/acapsdk/environment-setup* && \
+    BACNET_VENDOR_ID="${BACNET_VENDOR_ID}" BACNET_VENDOR_NAME="${BACNET_VENDOR_NAME}" \
+        acap-build ./ -a THIRD_PARTY_LICENSES.txt
 
 FROM scratch
 COPY --from=package /opt/app/*.eap /

@@ -39,9 +39,14 @@ bool bacnet_device_running(void);
 void bacnet_device_set_analog(const ObjectConfig *object, double value);
 void bacnet_device_set_binary(const ObjectConfig *object, bool active);
 void bacnet_device_set_state(const ObjectConfig *object, uint32_t state);
-/* Marks an object whose event subscription failed (Reliability
- * CONFIGURATION_ERROR, Status_Flags FAULT). */
-void bacnet_device_set_fault(const ObjectConfig *object, bool fault);
+typedef enum {
+    OBJECT_OK,           /* NO_FAULT_DETECTED */
+    OBJECT_NO_DATA,      /* NO_SENSOR: no event received since it was created */
+    OBJECT_CONFIG_ERROR, /* CONFIGURATION_ERROR: the event subscription failed */
+} ObjectHealth;
+
+/* Sets Reliability; Status_Flags FAULT is set for every value but OBJECT_OK. */
+void bacnet_device_set_health(const ObjectConfig *object, ObjectHealth health);
 
 /* Present value as text for the status page. */
 void bacnet_device_value_text(const ObjectConfig *object, char *out, size_t out_size);

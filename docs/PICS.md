@@ -11,7 +11,7 @@ objects or services the app supports.
 | Application software version | the ACAP version, reported in Application_Software_Version |
 | Firmware revision | the AXIS OS version, reported in Firmware_Revision |
 | BACnet protocol revision | 28 (bacnet-stack 1.7.0) |
-| Vendor name and identifier | placeholder: "BACnet Stack at SourceForge", 260 (the library default). A released product needs its own vendor identifier from ASHRAE. |
+| Vendor name and identifier | build settings `BACNET_VENDOR_NAME` and `BACNET_VENDOR_ID`, default "BACnet Stack at SourceForge", 260 (the library default). A released product needs its own vendor identifier from ASHRAE. |
 | Product description | Exposes events from an Axis network camera (I/O, tamper, analytics, storage and other device events) as read-only BACnet values over BACnet/IP. |
 
 ## BACnet standardized device profile (Annex L)
@@ -55,9 +55,12 @@ The values are not commandable: there is no Priority_Array or
 Relinquish_Default. WriteProperty and WritePropertyMultiple are not
 supported services and are rejected with UNRECOGNIZED_SERVICE.
 
-**Reliability:** NO_FAULT_DETECTED in normal operation, and
+**Reliability:** NO_SENSOR from the moment an object is created until its
+first event value arrives, NO_FAULT_DETECTED after that, and
 CONFIGURATION_ERROR when the camera rejects the object's event subscription.
-Status_Flags FAULT follows Reliability.
+Status_Flags FAULT is set whenever Reliability is not NO_FAULT_DETECTED when
+the property is read; the Status_Flags in COV notifications always report
+FAULT as false (bacnet-stack behavior).
 
 **Range restrictions:**
 

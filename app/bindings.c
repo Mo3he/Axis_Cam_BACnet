@@ -12,6 +12,7 @@ typedef struct {
     const ObjectConfig *object;
     guint subscription;
     bool subscribed;
+    bool has_value; /* a converted value arrived since the object was created */
     char error[192];
     char last_raw[VALUE_MAX_LEN + 1];
     gint64 last_update; /* Unix time, 0 = no event yet */
@@ -104,6 +105,9 @@ static void apply_value(BindingState *state, const EventValue *value) {
     event_value_to_string(value, state->last_raw, sizeof(state->last_raw));
     if (converted) {
         state->error[0] = '\0';
+        if (!state->has_value)
+            bacnet_device_set_health(object, OBJECT_OK);
+        state->has_value = true;
     } else {
         snprintf(state->error, sizeof(state->error), "value '%s' of %s cannot be converted", state->last_raw,
                  object->binding.data_key);
@@ -171,8 +175,12 @@ void bindings_start(const ObjectsConfig *objects) {
         BindingState *state = &states[i];
         memset(state, 0, sizeof(*state));
         state->object = &objects->objects[i];
+        /* Before subscribing: stateful events deliver their current state
+         * from inside the subscribe call. */
+        bacnet_device_set_health(state->object, OBJECT_NO_DATA);
         state->subscribed = event_handler && subscribe(state);
-        bacnet_device_set_fault(state->object, !state->subscribed);
+        if (!state->subscribed)
+            bacnet_device_set_health(state->object, OBJECT_CONFIG_ERROR);
     }
     state_count = objects->count;
 }
@@ -202,6 +210,7 @@ cJSON *bindings_status(void) {
         cJSON_AddStringToObject(item, "present_value", value);
         cJSON_AddStringToObject(item, "topic", path);
         cJSON_AddBoolToObject(item, "subscribed", state->subscribed);
+        cJSON_AddBoolToObject(item, "has_value", state->has_value);
         cJSON_AddNumberToObject(item, "events", (double)state->events);
         cJSON_AddStringToObject(item, "last_event_value", state->last_raw);
         cJSON_AddNumberToObject(item, "last_event_time", (double)state->last_update);

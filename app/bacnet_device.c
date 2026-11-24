@@ -238,8 +238,10 @@ void bacnet_device_set_state(const ObjectConfig *object, uint32_t state) {
         Multistate_Value_Present_Value_Set(object->instance, state);
 }
 
-void bacnet_device_set_fault(const ObjectConfig *object, bool fault) {
-    BACNET_RELIABILITY reliability = fault ? RELIABILITY_CONFIGURATION_ERROR : RELIABILITY_NO_FAULT_DETECTED;
+void bacnet_device_set_health(const ObjectConfig *object, ObjectHealth health) {
+    BACNET_RELIABILITY reliability = health == OBJECT_CONFIG_ERROR ? RELIABILITY_CONFIGURATION_ERROR
+                                     : health == OBJECT_NO_DATA    ? RELIABILITY_NO_SENSOR
+                                                                   : RELIABILITY_NO_FAULT_DETECTED;
     if (!running)
         return;
     switch (object->kind) {

@@ -15,7 +15,13 @@ LDLIBS += $(BACNET_STACK)/apps/lib/libbacnet.a $(shell pkg-config --libs $(PKGS)
 # The library leaves the Device object to the application. Use its
 # configurable implementation with only the object types this app serves, so
 # no other object type is linked in. Built unmodified, without our -Werror.
-BACNET_DEVICE_DEFINES = -DCONFIG_BACNET_BASIC_OBJECT_ANALOG_VALUE \
+# BACnet vendor identifier and name in the Device object. 260 is
+# bacnet-stack's default; a product needs its own ID from ASHRAE.
+BACNET_VENDOR_ID ?= 260
+BACNET_VENDOR_NAME ?= BACnet Stack at SourceForge
+BACNET_DEVICE_DEFINES = -DBACNET_VENDOR_ID=$(BACNET_VENDOR_ID) \
+	-DBACNET_VENDOR_NAME='"$(BACNET_VENDOR_NAME)"' \
+	-DCONFIG_BACNET_BASIC_OBJECT_ANALOG_VALUE \
 	-DCONFIG_BACNET_BASIC_OBJECT_BINARY_VALUE \
 	-DCONFIG_BACNET_BASIC_OBJECT_MULTISTATE_VALUE \
 	-DCONFIG_BACNET_BASIC_COV_SUBSCRIPTIONS_SIZE=128

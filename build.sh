@@ -5,6 +5,7 @@
 #   ./build.sh                 # aarch64 and armv7hf
 #   ARCHES=aarch64 ./build.sh  # one architecture
 #   RUNTIME=podman ./build.sh  # force a container runtime
+#   BACNET_VENDOR_ID=123 BACNET_VENDOR_NAME="Example" ./build.sh
 
 set -eu
 
@@ -35,7 +36,11 @@ for arch in $ARCHES; do
 	echo "==> Building ${arch} with ${RUNTIME}"
 	rm -rf "$output_dir"
 	mkdir -p "$output_dir"
-	"$RUNTIME" build --build-arg ARCH="$arch" --target package -t "$tag" "$REPO_ROOT"
+	set -- --build-arg ARCH="$arch"
+	# Optional: BACNET_VENDOR_ID=123 BACNET_VENDOR_NAME="Example" ./build.sh
+	[ -z "${BACNET_VENDOR_ID:-}" ] || set -- "$@" --build-arg BACNET_VENDOR_ID="$BACNET_VENDOR_ID"
+	[ -z "${BACNET_VENDOR_NAME:-}" ] || set -- "$@" --build-arg BACNET_VENDOR_NAME="$BACNET_VENDOR_NAME"
+	"$RUNTIME" build "$@" --target package -t "$tag" "$REPO_ROOT"
 	container=$($RUNTIME create "$tag")
 	"$RUNTIME" cp "$container:/opt/app/." "$output_dir/"
 	"$RUNTIME" rm "$container" >/dev/null

@@ -86,7 +86,9 @@ How values are converted:
 | Multi-state Value | text or number | Text matches a state name (case-insensitive); a number is the 1-based state. |
 
 A value that cannot be converted leaves the present value unchanged and is
-shown on the settings page. An object whose event subscription fails reports
+shown on the settings page. Until an object receives its first event value it
+reports Reliability NO_SENSOR (Status_Flags FAULT), so a BMS does not take its
+initial value for a reading. An object whose event subscription fails reports
 Reliability CONFIGURATION_ERROR.
 
 The object list can also be read and written as JSON at
@@ -154,13 +156,16 @@ command-line tools and with bacpypes3:
 - Read-only: no commandable objects and no WriteProperty.
 - BACnet/IP only, without BBMD or foreign device registration, so discovery
   needs the BMS on the same subnet or a BBMD on the network.
-- The Device object uses bacnet-stack's default vendor identifier (260). A
-  released product needs its own vendor identifier, and some projects require
-  BTL certification, which this beta does not have.
+- The Device object uses bacnet-stack's default vendor identifier (260)
+  unless the package is built with its own (see
+  [Build from source](#build-from-source)). A released product needs a vendor
+  identifier from ASHRAE, and some projects require BTL certification, which
+  this beta does not have.
 - Occupancy works with an AXIS Object Analytics "occupancy in area" scenario:
   bind an Analog Value to the `human` or `total` field of its event. These
-  fields are not stateful, so the value is 0 until the scenario's first event
-  (a few seconds after saving). Line-crossing count scenarios are not tested.
+  fields are not stateful, so the object reports NO_SENSOR until the
+  scenario's next event, which took up to about 25 seconds in testing.
+  Line-crossing count scenarios are not tested.
 
 ## Build from source
 
@@ -170,6 +175,12 @@ downloads the pinned bacnet-stack release.
 ```sh
 ./build.sh                 # aarch64 and armv7hf into ./releases
 ARCHES=aarch64 ./build.sh  # a single architecture
+```
+
+The BACnet vendor identifier and name are build settings:
+
+```sh
+BACNET_VENDOR_ID=1234 BACNET_VENDOR_NAME="Example Corp" ./build.sh
 ```
 
 ### Tests
