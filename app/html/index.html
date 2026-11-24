@@ -136,33 +136,75 @@
       .msg.error {
         color: var(--bad);
       }
-      table {
-        width: 100%;
-        border-collapse: collapse;
+      .object-list {
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid var(--border);
       }
-      th,
-      td {
-        text-align: left;
-        padding: 6px 8px;
+      .object-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto;
+        gap: 6px 20px;
+        align-items: center;
+        padding: 12px 4px;
         border-bottom: 1px solid var(--border);
-        vertical-align: top;
       }
-      th {
+      .object-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .object-title strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge {
+        flex: none;
+        padding: 1px 8px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 12px;
         color: var(--muted);
+        white-space: nowrap;
+      }
+      .sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+      .value {
+        font-size: 16px;
         font-weight: 600;
-        font-size: 12px;
       }
-      td.small {
-        font-size: 12px;
+      .row-actions {
+        display: flex;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .row-actions button {
+        padding: 5px 10px;
+      }
+      .empty {
+        padding: 16px 4px;
         color: var(--muted);
-        word-break: break-all;
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 12px;
+        }
+        .object-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
       }
       .dot {
         display: inline-block;
+        flex: none;
         width: 9px;
         height: 9px;
         border-radius: 50%;
-        margin-right: 6px;
         background: var(--muted);
       }
       .dot.ok {
@@ -174,13 +216,23 @@
       .hidden {
         display: none;
       }
-      .status-line {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 24px;
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 10px 20px;
       }
-      .status-line b {
-        font-weight: 600;
+      .status-grid div span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .status-grid .state {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .wide {
+        grid-column: 1 / -1;
       }
     </style>
   </head>
@@ -193,7 +245,7 @@
 
       <section>
         <h2>Status</h2>
-        <div class="status-line" id="status">Loading...</div>
+        <div class="status-grid" id="status">Loading...</div>
       </section>
 
       <section>
@@ -220,7 +272,7 @@
               <span>Location</span>
               <input type="text" id="Location" maxlength="64" />
             </label>
-            <label>
+            <label class="wide">
               <span>Description</span>
               <input type="text" id="Description" maxlength="64" />
             </label>
@@ -238,19 +290,7 @@
           Each object is read-only over BACnet and follows one field of a camera event. Stateful events (marked
           "state") give a value as soon as the object is saved.
         </p>
-        <table>
-          <thead>
-            <tr>
-              <th>Object</th>
-              <th>Name</th>
-              <th>Present value</th>
-              <th>Event</th>
-              <th>Last event</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="objects"></tbody>
-        </table>
+        <div class="object-list" id="objects"></div>
         <div class="actions" style="margin-top: 12px">
           <button type="button" id="add">Add object</button>
           <span class="msg" id="objects-msg"></span>
@@ -435,59 +475,75 @@
       function renderStatus(status) {
         const box = $("status");
         box.replaceChildren();
-        const state = el("span");
-        const dot = el("span", undefined, "dot " + (status.running ? "ok" : status.error ? "bad" : ""));
-        state.append(dot, status.running ? "Running" : status.enabled ? "Not running" : "Disabled");
-        box.append(state);
-        if (status.error) box.append(el("span", status.error, "msg error"));
         const d = status.device;
+        const stateText = status.running ? "Running" : status.enabled ? "Not running" : "Disabled";
+        const state = el("div");
+        const stateValue = el("div", undefined, "state");
+        stateValue.append(el("span", undefined, "dot " + (status.running ? "ok" : status.error ? "bad" : "")), stateText);
+        state.append(el("span", "Status"), stateValue);
+        box.append(state);
         const fields = [
           ["Instance", d.instance],
           ["Name", d.name],
-          ["Address", d.address ? `${d.address}:${d.port}` : `port ${d.port}`],
+          ["Address", d.address ? `${d.address}:${d.port}` : `UDP ${d.port}`],
           ["Version", d.version],
         ];
         for (const [label, value] of fields) {
-          const item = el("span");
-          item.append(el("b", label + ": "), String(value));
+          const item = el("div");
+          item.append(el("span", label), el("div", String(value)));
           box.append(item);
         }
+        if (status.error) box.append(el("div", status.error, "msg error wide"));
+      }
+
+      /* Readable event name from the camera's declarations, else the topic
+         names without namespaces. */
+      function eventLabel(topic) {
+        const key = topic.join("/");
+        const known = events.find((e) => e.topic.join("/") === key);
+        return known ? known.label : topic.map((t) => t.split(":").pop()).join(" / ");
       }
 
       function renderObjects(statusObjects) {
-        const body = $("objects");
-        body.replaceChildren();
+        const list = $("objects");
+        list.replaceChildren();
         if (!objects.length) {
-          const row = el("tr");
-          const cell = el("td", "No objects yet. Add one to publish a camera event over BACnet.", "small");
-          cell.colSpan = 6;
-          row.append(cell);
-          body.append(row);
+          list.append(el("div", "No objects yet. Add one to publish a camera event over BACnet.", "empty"));
           return;
         }
         objects.forEach((object, index) => {
           const live = (statusObjects || []).find((s) => s.type === object.type && s.instance === object.instance);
-          const row = el("tr");
-          const ident = el("td");
-          const dot = el("span", undefined, "dot " + (!live ? "" : live.subscribed && !live.error ? "ok" : "bad"));
-          ident.append(dot, `${TYPE_LABEL[object.type]} ${object.instance}`);
-          const filter = object.event.source_key ? ` (${object.event.source_key}=${object.event.source_value})` : "";
-          const lastEvent = live && live.last_event_time
-            ? `${new Date(live.last_event_time * 1000).toLocaleTimeString()}: ${live.last_event_value}`
-            : "none yet";
-          const eventCell = el("td", object.event.topic.join("/") + filter + " -> " + object.event.data_key, "small");
-          const lastCell = el("td", lastEvent, "small");
-          if (live && live.error) lastCell.append(el("div", live.error, "msg error"));
-          const buttons = el("td");
+          const row = el("div", undefined, "object-row");
+
+          const info = el("div");
+          const title = el("div", undefined, "object-title");
+          const health = !live ? "" : live.subscribed && !live.error ? "ok" : "bad";
+          title.append(el("span", undefined, "dot " + health), el("span", `${TYPE_LABEL[object.type]} ${object.instance}`, "badge"),
+            el("strong", object.name));
+          const filter = object.event.source_key ? `, ${object.event.source_key} ${object.event.source_value}` : "";
+          const source = el("div", `${eventLabel(object.event.topic)}${filter} (${object.event.data_key})`, "sub");
+          source.title = object.event.topic.join("/");
+          info.append(title, source);
+
+          const value = el("div");
+          value.append(el("div", live ? live.present_value || "-" : "-", "value"));
+          const last = live && live.last_event_time
+            ? `Last event ${new Date(live.last_event_time * 1000).toLocaleTimeString()}: ${live.last_event_value}`
+            : "No event yet";
+          value.append(el("div", last, "sub"));
+          if (live && live.error) value.append(el("div", live.error, "sub msg error"));
+
+          const actions = el("div", undefined, "row-actions");
           const edit = el("button", "Edit", "secondary");
           edit.type = "button";
           edit.addEventListener("click", () => openEditor(index));
           const remove = el("button", "Delete", "danger");
           remove.type = "button";
           remove.addEventListener("click", () => deleteObject(index));
-          buttons.append(edit, " ", remove);
-          row.append(ident, el("td", object.name), el("td", live ? live.present_value : "-"), eventCell, lastCell, buttons);
-          body.append(row);
+          actions.append(edit, remove);
+
+          row.append(info, value, actions);
+          list.append(row);
         });
       }
 
@@ -605,8 +661,12 @@
         select.options[0].value = "";
         const key = topic ? topic.join("/") : "";
         let found = !key;
+        const counts = {};
+        for (const event of events) counts[event.label] = (counts[event.label] || 0) + 1;
         events.forEach((event, index) => {
-          const option = el("option", `${event.label}  (${event.topic.join("/")})`);
+          const path = event.topic.join("/");
+          const option = el("option", counts[event.label] > 1 ? `${event.label} (${path})` : event.label);
+          option.title = path;
           option.value = String(index);
           if (event.topic.join("/") === key) {
             option.selected = true;
@@ -801,7 +861,7 @@
         } catch (error) {
           setMsg("device-msg", "Could not load the settings: " + error.message, true);
         }
-        eventsReady = loadEvents();
+        eventsReady = loadEvents().then(refresh);
         await refresh();
         setInterval(refresh, 5000);
       })();

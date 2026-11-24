@@ -32,7 +32,7 @@ COPY LICENSE /opt/app/LICENSE
 WORKDIR /opt/app
 RUN sed -i "s/\"BUILDARCH\"/\"${ARCH}\"/" manifest.json && \
     find . -name .DS_Store -delete && \
-    . /opt/axis/acapsdk/environment-setup* && acap-build ./
+    . /opt/axis/acapsdk/environment-setup* && acap-build ./ -a THIRD_PARTY_LICENSES.txt
 
 FROM scratch
 COPY --from=package /opt/app/*.eap /

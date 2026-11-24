@@ -157,8 +157,10 @@ command-line tools and with bacpypes3:
 - The Device object uses bacnet-stack's default vendor identifier (260). A
   released product needs its own vendor identifier, and some projects require
   BTL certification, which this beta does not have.
-- Occupancy and people counts from AXIS Object Analytics are not available
-  yet, because its events do not carry counts.
+- Occupancy works with an AXIS Object Analytics "occupancy in area" scenario:
+  bind an Analog Value to the `human` or `total` field of its event. These
+  fields are not stateful, so the value is 0 until the scenario's first event
+  (a few seconds after saving). Line-crossing count scenarios are not tested.
 
 ## Build from source
 

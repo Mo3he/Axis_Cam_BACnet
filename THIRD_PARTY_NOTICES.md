@@ -1,19 +1,25 @@
 # Third-party notices
 
 The packaging and app code in this repository is licensed under the BSD 3-Clause
-License; bundled upstream components retain their own licenses.
+License; bundled upstream components retain their own licenses. The full
+license texts ship inside every package as `THIRD_PARTY_LICENSES.txt`
+(source: [app/THIRD_PARTY_LICENSES.txt](app/THIRD_PARTY_LICENSES.txt)).
 
 ## bacnet-stack
 
 - Project: <https://github.com/bacnet-stack/bacnet-stack>
-- Version: 1.7.0, built unmodified from the release tarball (see `Dockerfile`).
-- License: the protocol core is `GPL-2.0-or-later WITH GCC-exception-2.0`; the
-  object, device and service handler files are `MIT`. Each source file carries
-  its SPDX identifier.
-- The GCC runtime library exception allows linking bacnet-stack into this app
-  without the app becoming GPL. Changes to bacnet-stack's GPL files must be
-  published if the package is distributed; this repository makes none.
-- Statically linked into the app binary.
+- Version: 1.7.0, built unmodified from the release tarball and statically
+  linked (see `Dockerfile`; the tarball is checked against a pinned SHA-256).
+- Licenses, as stated by the SPDX identifier in each linked source file:
+  - `GPL-2.0-or-later WITH GCC-exception-2.0`: protocol encoding, data link and
+    transaction handling. The exception gives unlimited permission to link
+    these files into other programs and distribute them without restriction
+    from these files. Modified copies of the files themselves would remain
+    under the GPL; this repository makes no modifications.
+  - `MIT`: Device, object and service handler files.
+  - `BSD-3-Clause`: `src/bacnet/basic/sys/mstimer.c`.
+  - `CC-PDDC` (public domain): `days.c`, `dst.c` and `color_rgb.c` in
+    `src/bacnet/basic/sys`.
 
 ## cJSON
 
