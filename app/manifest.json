@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "2.0.0",
+  "acapPackageConf": {
+    "setup": {
+      "appName": "BACnet_Server",
+      "friendlyName": "BACnet Server",
+      "vendor": "moshe@mohome.net",
+      "vendorId": "70ee172dd9",
+      "vendorUrl": "https://github.com/Mo3he/Axis_Cam_BACnet",
+      "version": "0.1.0",
+      "architecture": "BUILDARCH",
+      "runMode": "respawn",
+      "compatibleOsVersions": [{ "min": "11.11", "max": "13" }]
+    },
+    "configuration": {
+      "settingPage": "index.html",
+      "reverseProxy": [
+        {
+          "apiPath": "api",
+          "target": "http://localhost:2213/",
+          "access": "admin"
+        }
+      ],
+      "paramConfig": [
+        { "name": "Enabled", "default": "no", "type": "bool:no,yes" },
+        { "name": "ServerUrl", "default": "", "type": "string" },
+        { "name": "ApiKey", "default": "", "type": "password" }
+      ]
+    }
+  }
+}

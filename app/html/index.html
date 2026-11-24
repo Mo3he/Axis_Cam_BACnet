@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BACnet Server</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --text: #1c1f24;
+        --muted: #5b636e;
+        --border: #d8dce2;
+        --accent: #0b6ec4;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #16191d;
+        --card: #1e2228;
+        --text: #e7eaee;
+        --muted: #9aa3ae;
+        --border: #333a43;
+        --accent: #4da3ff;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        margin-bottom: 12px;
+      }
+      label span {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+      }
+      button {
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+      #status {
+        color: var(--muted);
+        min-height: 20px;
+      }
+      #status.error {
+        color: #c0392b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>BACnet Server</h1>
+        <button class="secondary" id="theme" type="button">Theme</button>
+      </header>
+
+      <section>
+        <form id="settings">
+          <label>
+            <span>Enabled</span>
+            <input type="checkbox" id="Enabled" />
+          </label>
+          <label>
+            <span>Server URL</span>
+            <input type="text" id="ServerUrl" autocomplete="off" spellcheck="false" />
+          </label>
+          <label>
+            <span>API key</span>
+            <input type="password" id="ApiKey" autocomplete="off" placeholder="not set" />
+          </label>
+          <button type="submit">Save</button>
+        </form>
+      </section>
+
+      <section>
+        <p id="status">Loading settings...</p>
+      </section>
+    </main>
+
+    <script>
+      const APP = "BACnet_Server";
+      const PARAM_CGI = "/axis-cgi/param.cgi";
+      const statusEl = document.getElementById("status");
+
+      function setStatus(message, isError) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", Boolean(isError));
+      }
+
+      const storedTheme = localStorage.getItem(APP + ".theme");
+      if (storedTheme) {
+        document.documentElement.setAttribute("data-theme", storedTheme);
+      }
+      document.getElementById("theme").addEventListener("click", () => {
+        const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem(APP + ".theme", next);
+      });
+
+      // Prefer the app's endpoint: param.cgi is missing on recorders/access controllers and puts
+      // secrets in the query string. It remains the fallback if the app endpoint fails.
+      async function readSettings() {
+        try {
+          const response = await fetch("api/settings", { credentials: "same-origin" });
+          if (response.ok) return response.json();
+        } catch (error) {
+          /* fall through to param.cgi */
+        }
+        const response = await fetch(`${PARAM_CGI}?action=list&group=root.${APP}`, { credentials: "same-origin" });
+        const text = await response.text();
+        if (!response.ok || /^\s*</.test(text)) throw new Error("no settings transport available");
+        const values = {};
+        for (const line of text.split(/\r?\n/)) {
+          const index = line.indexOf("=");
+          if (index < 0) continue;
+          values[line.slice(0, index).split(".").pop()] = line.slice(index + 1);
+        }
+        return values;
+      }
+
+      async function writeSettings(values) {
+        const body = Object.entries(values)
+          .map(([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`)
+          .join("&");
+        try {
+          const response = await fetch("api/settings", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+          });
+          if (response.ok) return;
+        } catch (error) {
+          /* fall through to param.cgi */
+        }
+        const query = Object.entries(values)
+          .map(([name, value]) => `root.${APP}.${name}=${encodeURIComponent(value)}`)
+          .join("&");
+        const response = await fetch(`${PARAM_CGI}?action=update&${query}`, { credentials: "same-origin" });
+        const text = await response.text();
+        if (!response.ok || !/ok/i.test(text)) throw new Error("could not write settings");
+      }
+
+      async function load() {
+        try {
+          const values = await readSettings();
+          document.getElementById("Enabled").checked = values.Enabled === "yes";
+          document.getElementById("ServerUrl").value = values.ServerUrl || "";
+          document.getElementById("ApiKey").placeholder = values.ApiKeyIsSet === "yes" ? "stored" : "not set";
+          setStatus("Settings loaded.");
+        } catch (error) {
+          setStatus(`Could not load settings: ${error.message}`, true);
+        }
+      }
+
+      document.getElementById("settings").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setStatus("Saving...");
+        const values = {
+          Enabled: document.getElementById("Enabled").checked ? "yes" : "no",
+          ServerUrl: document.getElementById("ServerUrl").value.trim(),
+        };
+        const apiKey = document.getElementById("ApiKey").value;
+        if (apiKey) values.ApiKey = apiKey;
+        try {
+          await writeSettings(values);
+          document.getElementById("ApiKey").value = "";
+          setStatus("Settings saved.");
+          load();
+        } catch (error) {
+          setStatus(`Could not save settings: ${error.message}`, true);
+        }
+      });
+
+      load();
+    </script>
+  </body>
+</html>
