@@ -168,10 +168,46 @@ static void test_conversions(void) {
     CHECK(strcmp(text, "42") == 0, "int as source filter text: %s", text);
 }
 
+static EventBinding aoa_binding(const char *level0, const char *level2) {
+    EventBinding binding = {.topic_count = 3};
+    snprintf(binding.topic[0].name, sizeof(binding.topic[0].name), "%s", level0);
+    snprintf(binding.topic[1].name, sizeof(binding.topic[1].name), "ObjectAnalytics");
+    snprintf(binding.topic[2].name, sizeof(binding.topic[2].name), "%s", level2);
+    snprintf(binding.data_key, sizeof(binding.data_key), "human");
+    return binding;
+}
+
+static void test_aoa_occupancy(void) {
+    int scenario = 0;
+    EventBinding binding = aoa_binding("CameraApplicationPlatform", "Device1Scenario2");
+    CHECK(binding_aoa_scenario(&binding, &scenario) && scenario == 2, "AOA scenario not recognised");
+
+    binding = aoa_binding("CameraApplicationPlatform", "Device1Scenario2Extra");
+    CHECK(!binding_aoa_scenario(&binding, &scenario), "trailing text accepted");
+    binding = aoa_binding("CameraApplicationPlatform", "Device1ScenarioANY");
+    CHECK(!binding_aoa_scenario(&binding, &scenario), "non-numeric scenario accepted");
+    binding = aoa_binding("Device", "Device1Scenario2");
+    CHECK(!binding_aoa_scenario(&binding, &scenario), "non-AOA topic accepted");
+    binding = aoa_binding("CameraApplicationPlatform", "Device1Scenario2");
+    snprintf(binding.source_key, sizeof(binding.source_key), "x");
+    CHECK(!binding_aoa_scenario(&binding, &scenario), "source-filtered binding accepted");
+
+    cJSON *ok = cJSON_Parse("{\"data\":{\"human\":3,\"total\":4,\"timestamp\":\"t\"}}");
+    EventValue value;
+    CHECK(aoa_occupancy_value(ok, "human", &value) && value.type == EV_INT && value.i == 3, "human count");
+    CHECK(!aoa_occupancy_value(ok, "car", &value), "missing class accepted");
+    CHECK(!aoa_occupancy_value(ok, "timestamp", &value), "non-number accepted");
+    cJSON_Delete(ok);
+    cJSON *error = cJSON_Parse("{\"error\":{\"code\":\"2004\"}}");
+    CHECK(!aoa_occupancy_value(error, "human", &value), "error response accepted");
+    cJSON_Delete(error);
+}
+
 int main(void) {
     test_valid_and_round_trip();
     test_rejections();
     test_conversions();
+    test_aoa_occupancy();
     if (failures) {
         printf("%d failure(s)\n", failures);
         return 1;

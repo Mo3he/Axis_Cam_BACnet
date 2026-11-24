@@ -387,3 +387,28 @@ bool event_value_to_state(const ObjectConfig *object, const EventValue *value, u
     *state = (uint32_t)number;
     return true;
 }
+
+bool binding_aoa_scenario(const EventBinding *binding, int *scenario) {
+    int device, id, end = 0;
+    if (binding->topic_count != 3 || binding->source_key[0])
+        return false;
+    if (strcmp(binding->topic[0].name, "CameraApplicationPlatform") != 0 ||
+        strcmp(binding->topic[1].name, "ObjectAnalytics") != 0)
+        return false;
+    if (sscanf(binding->topic[2].name, "Device%dScenario%d%n", &device, &id, &end) != 2 ||
+        binding->topic[2].name[end] != '\0' || id < 1)
+        return false;
+    *scenario = id;
+    return true;
+}
+
+bool aoa_occupancy_value(const cJSON *response, const char *key, EventValue *out) {
+    const cJSON *data = cJSON_GetObjectItemCaseSensitive(response, "data");
+    const cJSON *count = cJSON_GetObjectItemCaseSensitive(data, key);
+    if (!cJSON_IsNumber(count) || count->valuedouble < 0 || count->valuedouble != floor(count->valuedouble))
+        return false;
+    memset(out, 0, sizeof(*out));
+    out->type = EV_INT;
+    out->i = (long long)count->valuedouble;
+    return true;
+}

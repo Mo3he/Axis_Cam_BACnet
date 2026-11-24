@@ -1,12 +1,17 @@
 #include "bindings.h"
 
 #include <axsdk/axevent.h>
+#include <curl/curl.h>
+#include <gio/gio.h>
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
 
 #include "bacnet_device.h"
+
+#define SEED_ATTEMPTS 12
+#define SEED_RETRY_SECONDS 5
 
 typedef struct {
     const ObjectConfig *object;
@@ -22,8 +27,14 @@ typedef struct {
 static AXEventHandler *event_handler;
 static BindingState states[MAX_OBJECTS];
 static int state_count;
+/* Bumped on every start and stop so late seed results are dropped. */
+static unsigned generation;
+static GThreadPool *seed_pool;
+static void seed_worker(gpointer data, gpointer user_data);
 
 bool bindings_init(void) {
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    seed_pool = g_thread_pool_new(seed_worker, NULL, 2, FALSE, NULL);
     event_handler = ax_event_handler_new();
     if (!event_handler) {
         syslog(LOG_ERR, "could not create the event handler");
@@ -169,6 +180,157 @@ static bool subscribe(BindingState *state) {
     return ok;
 }
 
+/* Initial values for AOA occupancy objects (see binding_aoa_scenario). The
+ * HTTP request runs on a worker thread so BACnet traffic is never blocked;
+ * the result is applied on the main loop, unless an event came first. */
+typedef struct {
+    unsigned generation;
+    int index;
+    int scenario;
+    int attempt;
+    char *response;
+} SeedJob;
+
+static size_t collect(char *data, size_t size, size_t count, void *user_data) {
+    g_string_append_len(user_data, data, (gssize)(size * count));
+    return size * count;
+}
+
+static char *vapix_credentials(void) {
+    GError *error = NULL;
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+    GVariant *result = NULL;
+    char *credentials = NULL;
+
+    if (bus)
+        result = g_dbus_connection_call_sync(bus, "com.axis.HTTPConf1", "/com/axis/HTTPConf1/VAPIXServiceAccounts1",
+                                             "com.axis.HTTPConf1.VAPIXServiceAccounts1", "GetCredentials",
+                                             g_variant_new("(s)", "bacnet-server"), G_VARIANT_TYPE("(s)"),
+                                             G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+    if (result) {
+        g_variant_get(result, "(s)", &credentials);
+        g_variant_unref(result);
+    } else {
+        syslog(LOG_WARNING, "could not get VAPIX credentials: %s", error ? error->message : "unknown error");
+    }
+    g_clear_error(&error);
+    g_clear_object(&bus);
+    return credentials;
+}
+
+static char *fetch_occupancy(int scenario) {
+    char *credentials = vapix_credentials();
+    CURL *curl;
+    GString *body;
+    struct curl_slist *headers = NULL;
+    char request[128];
+    long status = 0;
+    CURLcode result;
+
+    if (!credentials)
+        return NULL;
+    curl = curl_easy_init();
+    if (!curl) {
+        g_free(credentials);
+        return NULL;
+    }
+    body = g_string_new(NULL);
+    snprintf(request, sizeof(request),
+             "{\"method\":\"getOccupancy\",\"apiVersion\":\"1.0\",\"params\":{\"scenario\":%d}}", scenario);
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://127.0.0.12/local/objectanalytics/control.cgi");
+    curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, collect);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, body);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    result = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    g_free(credentials);
+
+    if (result != CURLE_OK || status != 200) {
+        g_string_free(body, TRUE);
+        return NULL;
+    }
+    return g_string_free(body, FALSE);
+}
+
+static void free_seed(SeedJob *job) {
+    g_free(job->response);
+    g_free(job);
+}
+
+static bool seed_wanted(const SeedJob *job) {
+    return job->generation == generation && job->index < state_count && !states[job->index].has_value;
+}
+
+static gboolean seed_done(gpointer user_data);
+
+static gboolean seed_retry(gpointer user_data) {
+    SeedJob *job = user_data;
+    if (seed_wanted(job))
+        g_thread_pool_push(seed_pool, job, NULL);
+    else
+        free_seed(job);
+    return G_SOURCE_REMOVE;
+}
+
+static void seed_worker(gpointer data, gpointer user_data) {
+    (void)user_data;
+    SeedJob *job = data;
+    g_free(job->response);
+    job->response = fetch_occupancy(job->scenario);
+    g_idle_add(seed_done, job);
+}
+
+static gboolean seed_done(gpointer user_data) {
+    SeedJob *job = user_data;
+    cJSON *response;
+    EventValue value;
+
+    if (!seed_wanted(job)) {
+        free_seed(job);
+        return G_SOURCE_REMOVE;
+    }
+    BindingState *state = &states[job->index];
+    response = job->response ? cJSON_Parse(job->response) : NULL;
+    if (aoa_occupancy_value(response, state->object->binding.data_key, &value)) {
+        state->last_update = g_get_real_time() / G_USEC_PER_SEC;
+        apply_value(state, &value);
+        free_seed(job);
+    } else if (cJSON_GetObjectItemCaseSensitive(response, "data") ||
+               cJSON_GetObjectItemCaseSensitive(response, "error")) {
+        /* Object Analytics answered, but not with this count (e.g. not an
+         * occupancy scenario): wait for events as usual. */
+        free_seed(job);
+    } else if (++job->attempt < SEED_ATTEMPTS) {
+        /* Object Analytics not reachable yet, e.g. still starting. */
+        g_timeout_add_seconds(SEED_RETRY_SECONDS, seed_retry, job);
+    } else {
+        syslog(LOG_INFO, "%s %u: could not read the current count from Object Analytics",
+               object_kind_name(state->object->kind), state->object->instance);
+        free_seed(job);
+    }
+    cJSON_Delete(response);
+    return G_SOURCE_REMOVE;
+}
+
+static void seed_start(int index) {
+    int scenario;
+    if (!seed_pool || !binding_aoa_scenario(&states[index].object->binding, &scenario))
+        return;
+    SeedJob *job = g_new0(SeedJob, 1);
+    job->generation = generation;
+    job->index = index;
+    job->scenario = scenario;
+    g_thread_pool_push(seed_pool, job, NULL);
+}
+
 void bindings_start(const ObjectsConfig *objects) {
     bindings_stop();
     for (int i = 0; i < objects->count; i++) {
@@ -183,9 +345,13 @@ void bindings_start(const ObjectsConfig *objects) {
             bacnet_device_set_health(state->object, OBJECT_CONFIG_ERROR);
     }
     state_count = objects->count;
+    for (int i = 0; i < state_count; i++)
+        if (states[i].subscribed && !states[i].has_value)
+            seed_start(i);
 }
 
 void bindings_stop(void) {
+    generation++;
     for (int i = 0; i < state_count; i++) {
         if (states[i].subscribed)
             ax_event_handler_unsubscribe(event_handler, states[i].subscription, NULL);

@@ -88,7 +88,9 @@ How values are converted:
 A value that cannot be converted leaves the present value unchanged and is
 shown on the settings page. Until an object receives its first event value it
 reports Reliability NO_SENSOR (Status_Flags FAULT), so a BMS does not take its
-initial value for a reading. An object whose event subscription fails reports
+initial value for a reading. Objects bound to an AXIS Object Analytics scenario
+read the scenario's current count when they start, so they have a value
+without waiting for an event. An object whose event subscription fails reports
 Reliability CONFIGURATION_ERROR.
 
 The object list can also be read and written as JSON at
@@ -162,10 +164,9 @@ command-line tools and with bacpypes3:
   identifier from ASHRAE, and some projects require BTL certification, which
   this beta does not have.
 - Occupancy works with an AXIS Object Analytics "occupancy in area" scenario:
-  bind an Analog Value to the `human` or `total` field of its event. These
-  fields are not stateful, so the object reports NO_SENSOR until the
-  scenario's next event, which took up to about 25 seconds in testing.
-  Line-crossing count scenarios are not tested.
+  bind an Analog Value to the `human` or `total` field of its event. Values
+  update when the scenario reports new data. Line-crossing count scenarios
+  are not tested.
 
 ## Build from source
 

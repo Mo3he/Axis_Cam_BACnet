@@ -91,4 +91,12 @@ bool event_value_to_binary(const EventValue *value, bool invert, bool *active);
 /* Matches state text (case-insensitive) or a 1-based state number. */
 bool event_value_to_state(const ObjectConfig *object, const EventValue *value, uint32_t *state);
 
+/* AXIS Object Analytics occupancy events are only sent when something
+ * changes, so an object bound to one would wait for its first value. These
+ * let the app read the current count once instead. True when the binding is
+ * an AOA scenario event without a source filter; sets the scenario ID. */
+bool binding_aoa_scenario(const EventBinding *binding, int *scenario);
+/* Reads data.<key> from a getOccupancy response as an integer value. */
+bool aoa_occupancy_value(const cJSON *response, const char *key, EventValue *out);
+
 #endif

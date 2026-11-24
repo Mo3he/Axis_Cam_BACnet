@@ -56,7 +56,8 @@ Relinquish_Default. WriteProperty and WritePropertyMultiple are not
 supported services and are rejected with UNRECOGNIZED_SERVICE.
 
 **Reliability:** NO_SENSOR from the moment an object is created until its
-first event value arrives, NO_FAULT_DETECTED after that, and
+first event value arrives (objects bound to an AXIS Object Analytics scenario
+read its current count at start instead), NO_FAULT_DETECTED after that, and
 CONFIGURATION_ERROR when the camera rejects the object's event subscription.
 Status_Flags FAULT is set whenever Reliability is not NO_FAULT_DETECTED when
 the property is read; the Status_Flags in COV notifications always report

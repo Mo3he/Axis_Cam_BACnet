@@ -1,6 +1,6 @@
 PROG = BACnet_Server
 SRCS = main.c bacnet_device.c bindings.c objects_config.c cJSON.c
-PKGS = axparameter axevent glib-2.0 gio-2.0
+PKGS = axparameter axevent glib-2.0 gio-2.0 libcurl
 
 BACNET_STACK ?= /opt/bacnet-stack
 # Must match the defines the library was built with (Dockerfile).
