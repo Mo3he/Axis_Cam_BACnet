@@ -201,6 +201,7 @@ notifications followed the CO2 and temperature readings.
 
 Docker or Podman is required; the Axis ACAP Native SDK image does the build and
 downloads the pinned bacnet-stack release.
+The default two-architecture build runs both builds concurrently.
 
 ```sh
 ./build.sh                 # aarch64 and armv7hf into ./releases

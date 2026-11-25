@@ -30,23 +30,57 @@ fi
 mkdir -p "$REPO_ROOT/releases"
 find "$REPO_ROOT/releases" -maxdepth 1 -type f -name '*.eap' ! -name 'signed_*' -delete
 
-for arch in $ARCHES; do
+build_arch() {
+	arch=$1
 	tag=$(echo "BACnet_Server-${arch}" | tr '[:upper:]' '[:lower:]')
 	output_dir="$REPO_ROOT/.build/${arch}"
 	echo "==> Building ${arch} with ${RUNTIME}"
 	rm -rf "$output_dir"
 	mkdir -p "$output_dir"
+	container=''
+	trap '[ -z "$container" ] || "$RUNTIME" rm -f "$container" >/dev/null 2>&1 || true' 0
+	trap 'exit 1' HUP INT TERM
 	set -- --build-arg ARCH="$arch"
 	# Optional: BACNET_VENDOR_ID=123 BACNET_VENDOR_NAME="Example" ./build.sh
 	[ -z "${BACNET_VENDOR_ID:-}" ] || set -- "$@" --build-arg BACNET_VENDOR_ID="$BACNET_VENDOR_ID"
 	[ -z "${BACNET_VENDOR_NAME:-}" ] || set -- "$@" --build-arg BACNET_VENDOR_NAME="$BACNET_VENDOR_NAME"
 	"$RUNTIME" build "$@" --target package -t "$tag" "$REPO_ROOT"
-	container=$($RUNTIME create "$tag")
+	container=$("$RUNTIME" create "$tag")
 	"$RUNTIME" cp "$container:/opt/app/." "$output_dir/"
 	"$RUNTIME" rm "$container" >/dev/null
-	find "$output_dir" -type f -name "*.eap" -exec mv {} "$REPO_ROOT/releases/" \;
+	container=''
+}
+
+arches=''
+for arch in $ARCHES; do
+	case " $arches " in
+		*" $arch "*) continue ;;
+	esac
+	arches="$arches $arch"
 done
 
+pids=''
+for arch in $arches; do
+	build_arch "$arch" &
+	pids="$pids $!"
+done
+
+failed=0
+for pid in $pids; do
+	if ! wait "$pid"; then
+		echo "Error: build worker $pid failed" >&2
+		failed=1
+	fi
+done
+
+if [ "$failed" -ne 0 ]; then
+	rm -rf "$REPO_ROOT/.build"
+	exit 1
+fi
+
+for arch in $arches; do
+	find "$REPO_ROOT/.build/$arch" -type f -name '*.eap' -exec mv {} "$REPO_ROOT/releases/" \;
+done
 rm -rf "$REPO_ROOT/.build"
 
 ls -lh "$REPO_ROOT"/releases/*.eap
