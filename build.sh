@@ -54,7 +54,7 @@ build_arch() {
 arches=''
 for arch in $ARCHES; do
 	case " $arches " in
-		*" $arch "*) continue ;;
+	*" $arch "*) continue ;;
 	esac
 	arches="$arches $arch"
 done
