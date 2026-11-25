@@ -13,9 +13,19 @@
 #define SEED_ATTEMPTS 12
 #define SEED_RETRY_SECONDS 5
 
+/* Callback data for one subscription. Unsubscribing completes later, so an
+ * event can still arrive after the state slot has been reused: it is dropped
+ * once the token is inactive, and the token is freed when the unsubscribe
+ * completes. */
+typedef struct {
+    void *state;
+    bool active;
+} SubscriptionToken;
+
 typedef struct {
     const ObjectConfig *object;
     guint subscription;
+    SubscriptionToken *token;
     bool subscribed;
     bool has_value; /* a converted value arrived since the object was created */
     char error[192];
@@ -127,7 +137,12 @@ static void apply_value(BindingState *state, const EventValue *value) {
 
 static void on_event(guint subscription, AXEvent *event, gpointer user_data) {
     (void)subscription;
-    BindingState *state = user_data;
+    SubscriptionToken *token = user_data;
+    if (!token->active) {
+        ax_event_free(event);
+        return;
+    }
+    BindingState *state = token->state;
     const AXEventKeyValueSet *set = ax_event_get_key_value_set(event);
     const EventBinding *binding = &state->object->binding;
     EventValue value;
@@ -164,8 +179,14 @@ static bool subscribe(BindingState *state) {
         ok = ax_event_key_value_set_add_key_value(set, key, binding->topic[level].ns, binding->topic[level].name,
                                                   AX_VALUE_TYPE_STRING, &error);
     }
-    if (ok)
-        ok = ax_event_handler_subscribe(event_handler, set, &state->subscription, on_event, state, &error);
+    if (ok) {
+        state->token = g_new0(SubscriptionToken, 1);
+        state->token->state = state;
+        state->token->active = true;
+        ok = ax_event_handler_subscribe(event_handler, set, &state->subscription, on_event, state->token, &error);
+        if (!ok)
+            g_clear_pointer(&state->token, g_free);
+    }
 
     if (!ok) {
         char path[256];
@@ -354,11 +375,38 @@ void bindings_start(const ObjectsConfig *objects) {
             seed_start(i);
 }
 
+static void on_unsubscribed(guint subscription, gpointer user_data, GError *error) {
+    (void)subscription;
+    if (error) {
+        syslog(LOG_WARNING, "unsubscribing from an event failed: %s", error->message);
+        g_error_free(error);
+    }
+    g_free(user_data);
+}
+
+/* Not ax_event_handler_unsubscribe(): it blocks on the default main context,
+ * which this runs in, and so stalled about 2 s per subscription. */
+static void unsubscribe(BindingState *state) {
+    GError *error = NULL;
+    SubscriptionToken *token = state->token;
+    state->token = NULL;
+    if (!token)
+        return;
+    token->active = false;
+    if (!ax_event_handler_unsubscribe_and_notify(event_handler, state->subscription, on_unsubscribed, token,
+                                                 &error)) {
+        /* The subscription may still deliver events: keep the inactive
+         * token rather than free it. */
+        syslog(LOG_WARNING, "unsubscribing from an event failed: %s", error ? error->message : "unknown error");
+        g_clear_error(&error);
+    }
+}
+
 void bindings_stop(void) {
     generation++;
     for (int i = 0; i < state_count; i++) {
         if (states[i].subscribed)
-            ax_event_handler_unsubscribe(event_handler, states[i].subscription, NULL);
+            unsubscribe(&states[i]);
         states[i].subscribed = false;
     }
     state_count = 0;
