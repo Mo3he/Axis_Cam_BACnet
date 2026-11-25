@@ -257,7 +257,11 @@ static char *fetch_occupancy(int scenario) {
         g_string_free(body, TRUE);
         return NULL;
     }
-    return g_string_free(body, FALSE);
+    /* Not g_string_free(body, FALSE): it can inline to
+     * g_string_free_and_steal(), which older AXIS OS lacks. */
+    char *text = g_strdup(body->str);
+    g_string_free(body, TRUE);
+    return text;
 }
 
 static void free_seed(SeedJob *job) {
