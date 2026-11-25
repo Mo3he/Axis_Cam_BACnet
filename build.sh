@@ -49,6 +49,11 @@ build_arch() {
 	"$RUNTIME" cp "$container:/opt/app/." "$output_dir/"
 	"$RUNTIME" rm "$container" >/dev/null
 	container=''
+	package_count=$(find "$output_dir" -type f -name "*_${arch}.eap" | wc -l | tr -d '[:space:]')
+	if [ "$package_count" -ne 1 ]; then
+		echo "Error: expected one ${arch} package in ${output_dir}, found ${package_count}" >&2
+		return 1
+	fi
 }
 
 arches=''

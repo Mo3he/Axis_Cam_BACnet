@@ -33,11 +33,8 @@ while IFS= read -r package; do
 	mv "$package" releases/
 done < <(find . -name '*.eap' -not -path './releases/*' -not -path './.git/*')
 
-found=$(find releases -name '*.eap' | wc -l | tr -d ' ')
-[ "$found" -gt 0 ] || {
-	echo "no .eap produced" >&2
-	exit 1
-}
+./ci/verify-packages.sh releases
 
+found=$(find releases -name '*.eap' | wc -l | tr -d ' ')
 echo "collected $found package(s):"
 ls -lh releases/

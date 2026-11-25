@@ -74,18 +74,7 @@ jobs:
         run: ./ci/build-packages.sh
 
       - name: Verify packages
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          packages=(releases/*.eap)
-          if [ ${#packages[@]} -eq 0 ]; then
-            echo "no .eap produced" >&2
-            exit 1
-          fi
-          for package in "${packages[@]}"; do
-            echo "== $package"
-            tar tzf "$package" >/dev/null
-          done
+        run: ./ci/verify-packages.sh releases
 
       - uses: actions/upload-artifact@v7
         with:
