@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 - 2026-11-25
 
+- Release 0.1.2.
 - Fix: 0.1.1 could fail to start on AXIS OS releases with GLib older than
   2.76, because it used `g_string_free_and_steal`.
 - Saving the objects or device settings took about 2 seconds per object,
