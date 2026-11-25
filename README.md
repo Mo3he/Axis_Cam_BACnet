@@ -37,7 +37,7 @@ as standard BACnet objects. Built on
 
 | Package | AXIS OS | Architecture | Status |
 |---|---|---|---|
-| ACAP 4 | 11.11 - 13 | aarch64 | Beta, tested on AXIS OS 12.11 |
+| ACAP 4 | 11.11 - 13 | aarch64 | Beta, tested on AXIS OS 12.11 and 13.0 |
 | ACAP 4 | 11.11 - 13 | armv7hf | Beta, built but not yet tested on a device |
 
 The app runs as the unprivileged `sdk` user. It does not require root access.
@@ -116,6 +116,31 @@ The object list can also be read and written as JSON at
 }
 ```
 
+### Example: AXIS D6310 Air Quality Sensor
+
+[examples/axis-d6310-air-quality.json](examples/axis-d6310-air-quality.json)
+publishes the sensor's measurements and detections as 16 objects:
+
+| Object | Value | Units |
+|---|---|---|
+| AV 1-3 | Temperature, humidity, CO2 | °C, %RH, ppm |
+| AV 4-7 | PM1.0, PM2.5, PM4.0, PM10 | µg/m³ |
+| AV 8-9 | VOC index, NOx index | none (index values, not concentrations) |
+| AV 10-12 | AQI, heat index, humidex | none, °C, none |
+| BV 1-2 | Vaping or smoking, sensor masked | |
+| BV 3-4 | CO2 alarm, PM2.5 alarm | |
+
+The measurements come from the sensor's metadata event, which arrives about
+once a second. The alarm objects filter the sensor's alarm event by its
+`source` field; add more for the other sources (AQI, VOC, PM10.0 and so on).
+Alarm thresholds are set in the sensor. Load the file with:
+
+```sh
+curl --digest -u USER:PASS -H 'Content-Type: application/json' \
+  --data @examples/axis-d6310-air-quality.json \
+  http://SENSOR/local/BACnet_Server/api/objects
+```
+
 ## Ports & security
 
 - **When enabled, the app listens on UDP 47808 (or the configured port) on the
@@ -152,6 +177,10 @@ command-line tools and with bacpypes3:
 - writes to present values, Out_Of_Service and the device name rejected;
 - Database_Revision unchanged across a restart and increased by configuration
   changes.
+
+Also tested on an AXIS D6310 Air Quality Sensor (AXIS OS 13.0.114) with the
+example above: all 16 objects read with the correct units, and COV
+notifications followed the CO2 and temperature readings.
 
 ## Limitations
 

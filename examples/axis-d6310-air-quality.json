@@ -1,0 +1,280 @@
+{
+  "objects": [
+    {
+      "type": "analog-value",
+      "instance": 1,
+      "name": "Temperature",
+      "description": "AXIS D6310 Temperature",
+      "units": 62,
+      "cov_increment": 0.2,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "Temperature"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 2,
+      "name": "Humidity",
+      "description": "AXIS D6310 Humidity",
+      "units": 29,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "Humidity"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 3,
+      "name": "CO2",
+      "description": "AXIS D6310 CO2",
+      "units": 96,
+      "cov_increment": 10,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "CO2"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 4,
+      "name": "PM1.0",
+      "description": "AXIS D6310 PM1.0",
+      "units": 219,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "PM1.0"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 5,
+      "name": "PM2.5",
+      "description": "AXIS D6310 PM2.5",
+      "units": 219,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "PM2.5"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 6,
+      "name": "PM4.0",
+      "description": "AXIS D6310 PM4.0",
+      "units": 219,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "PM4.0"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 7,
+      "name": "PM10",
+      "description": "AXIS D6310 PM10",
+      "units": 219,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "PM10.0"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 8,
+      "name": "VOC index",
+      "description": "AXIS D6310 VOC index",
+      "units": 95,
+      "cov_increment": 5,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "VOC"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 9,
+      "name": "NOx index",
+      "description": "AXIS D6310 NOx index",
+      "units": 95,
+      "cov_increment": 5,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "NOx"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 10,
+      "name": "AQI",
+      "description": "AXIS D6310 AQI",
+      "units": 95,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "AQI"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 11,
+      "name": "Heat index",
+      "description": "AXIS D6310 Heat index",
+      "units": 62,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "HeatIndex"
+      }
+    },
+    {
+      "type": "analog-value",
+      "instance": 12,
+      "name": "Humidex",
+      "description": "AXIS D6310 Humidex",
+      "units": 95,
+      "cov_increment": 1,
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Metadata"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "Humidex"
+      }
+    },
+    {
+      "type": "binary-value",
+      "instance": 1,
+      "name": "Vaping or smoking",
+      "description": "",
+      "invert": false,
+      "active_text": "Active",
+      "inactive_text": "Normal",
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Vaping"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "active"
+      }
+    },
+    {
+      "type": "binary-value",
+      "instance": 2,
+      "name": "Sensor masked",
+      "description": "",
+      "invert": false,
+      "active_text": "Active",
+      "inactive_text": "Normal",
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Masking"
+        ],
+        "source_key": "",
+        "source_value": "",
+        "data_key": "active"
+      }
+    },
+    {
+      "type": "binary-value",
+      "instance": 3,
+      "name": "CO2 alarm",
+      "description": "",
+      "invert": false,
+      "active_text": "Active",
+      "inactive_text": "Normal",
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Alarm"
+        ],
+        "source_key": "source",
+        "source_value": "CO2",
+        "data_key": "active"
+      }
+    },
+    {
+      "type": "binary-value",
+      "instance": 4,
+      "name": "PM2.5 alarm",
+      "description": "",
+      "invert": false,
+      "active_text": "Active",
+      "inactive_text": "Normal",
+      "event": {
+        "topic": [
+          "tnsaxis:AirQualityMonitor",
+          "tnsaxis:Alarm"
+        ],
+        "source_key": "source",
+        "source_value": "PM2.5",
+        "data_key": "active"
+      }
+    }
+  ]
+}
