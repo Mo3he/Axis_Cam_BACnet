@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BACnet Server</title>
+    <script src="mock.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --text: #1c1f24;
+        --muted: #5b636e;
+        --border: #d8dce2;
+        --accent: #0b6ec4;
+        --ok: #1e8e3e;
+        --bad: #c0392b;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #16191d;
+        --card: #1e2228;
+        --text: #e7eaee;
+        --muted: #9aa3ae;
+        --border: #333a43;
+        --accent: #4da3ff;
+        --ok: #4cc46a;
+        --bad: #ff7262;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 12px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 0 16px;
+      }
+      label {
+        display: block;
+        margin-bottom: 12px;
+      }
+      label span {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      label.inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      label.inline span {
+        display: inline;
+        margin: 0;
+        color: var(--text);
+      }
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 7px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+      }
+      textarea {
+        min-height: 90px;
+      }
+      button {
+        padding: 7px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      button.danger {
+        background: transparent;
+        color: var(--bad);
+        border: 1px solid var(--border);
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .msg {
+        min-height: 20px;
+        color: var(--muted);
+      }
+      .msg.error {
+        color: var(--bad);
+      }
+      .object-list {
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid var(--border);
+      }
+      .object-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto;
+        gap: 6px 20px;
+        align-items: center;
+        padding: 12px 4px;
+        border-bottom: 1px solid var(--border);
+      }
+      .object-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .object-title strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge {
+        flex: none;
+        padding: 1px 8px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+      .value {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .row-actions {
+        display: flex;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .row-actions button {
+        padding: 5px 10px;
+      }
+      .empty {
+        padding: 16px 4px;
+        color: var(--muted);
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 12px;
+        }
+        .object-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .dot {
+        display: inline-block;
+        flex: none;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .dot.ok {
+        background: var(--ok);
+      }
+      .dot.bad {
+        background: var(--bad);
+      }
+      .hidden {
+        display: none;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 10px 20px;
+      }
+      .status-grid div span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .status-grid .state {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .wide {
+        grid-column: 1 / -1;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>BACnet Server</h1>
+        <button class="secondary" id="theme" type="button">Theme</button>
+      </header>
+
+      <section>
+        <h2>Status</h2>
+        <div class="status-grid" id="status">Loading...</div>
+      </section>
+
+      <section>
+        <h2>Device</h2>
+        <form id="device-form">
+          <label class="inline"><input type="checkbox" id="Enabled" /><span>Enable the BACnet/IP device</span></label>
+          <div class="grid">
+            <label>
+              <span>Device instance</span>
+              <input type="number" id="DeviceInstance" min="0" max="4194302" />
+              <div class="hint">Unique on the BACnet network. Leave empty to derive it from the serial number.</div>
+            </label>
+            <label>
+              <span>Device name</span>
+              <input type="text" id="DeviceName" maxlength="64" />
+              <div class="hint">Unique on the BACnet network. Leave empty for model and serial number.</div>
+            </label>
+            <label>
+              <span>UDP port</span>
+              <input type="number" id="UdpPort" min="1024" max="65535" />
+              <div class="hint">47808 (0xBAC0) is the BACnet/IP default.</div>
+            </label>
+            <label>
+              <span>Location</span>
+              <input type="text" id="Location" maxlength="64" />
+            </label>
+            <label class="wide">
+              <span>Description</span>
+              <input type="text" id="Description" maxlength="64" />
+            </label>
+          </div>
+          <div class="actions">
+            <button type="submit">Save device settings</button>
+            <span class="msg" id="device-msg"></span>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <h2>Objects</h2>
+        <p class="hint">
+          Each object is read-only over BACnet and follows one field of a camera event. Stateful events (marked
+          "state") give a value as soon as the object is saved.
+        </p>
+        <div class="object-list" id="objects"></div>
+        <div class="actions" style="margin-top: 12px">
+          <button type="button" id="add">Add object</button>
+          <span class="msg" id="objects-msg"></span>
+        </div>
+      </section>
+
+      <section id="editor" class="hidden">
+        <h2 id="editor-title">Object</h2>
+        <form id="object-form">
+          <div class="grid">
+            <label>
+              <span>Type</span>
+              <select id="o-type">
+                <option value="binary-value">Binary Value</option>
+                <option value="analog-value">Analog Value</option>
+                <option value="multistate-value">Multi-state Value</option>
+              </select>
+            </label>
+            <label>
+              <span>Instance</span>
+              <input type="number" id="o-instance" min="0" max="4194302" required />
+            </label>
+            <label>
+              <span>Name</span>
+              <input type="text" id="o-name" maxlength="64" required />
+            </label>
+            <label>
+              <span>Description</span>
+              <input type="text" id="o-description" maxlength="128" />
+            </label>
+          </div>
+
+          <label>
+            <span>Camera event</span>
+            <select id="o-event"></select>
+            <div class="hint" id="o-event-hint">Loading the camera's events...</div>
+          </label>
+          <div class="grid">
+            <label>
+              <span>Only when field</span>
+              <select id="o-source-key"></select>
+            </label>
+            <label>
+              <span>equals</span>
+              <input type="text" id="o-source-value" list="o-source-values" />
+              <datalist id="o-source-values"></datalist>
+            </label>
+            <label>
+              <span>Value from field</span>
+              <select id="o-data-key"></select>
+            </label>
+          </div>
+
+          <div class="grid kind analog-value">
+            <label>
+              <span>Units</span>
+              <select id="o-units"></select>
+            </label>
+            <label>
+              <span>COV increment</span>
+              <input type="number" id="o-cov" min="0" step="any" />
+              <div class="hint">Smallest change that is sent to COV subscribers. 0 sends every change.</div>
+            </label>
+          </div>
+          <div class="grid kind binary-value">
+            <label>
+              <span>Active text</span>
+              <input type="text" id="o-active-text" maxlength="32" placeholder="active" />
+            </label>
+            <label>
+              <span>Inactive text</span>
+              <input type="text" id="o-inactive-text" maxlength="32" placeholder="inactive" />
+            </label>
+            <label class="inline"><input type="checkbox" id="o-invert" /><span>Invert (true means inactive)</span></label>
+          </div>
+          <div class="kind multistate-value">
+            <label>
+              <span>States, one per line (2 to 16)</span>
+              <textarea id="o-states"></textarea>
+              <div class="hint">An event value matches a state by its text, or by its number starting at 1.</div>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button type="submit">Save object</button>
+            <button type="button" class="secondary" id="cancel">Cancel</button>
+            <span class="msg" id="editor-msg"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      "use strict";
+      const APP = "BACnet_Server";
+      const $ = (id) => document.getElementById(id);
+      const TYPE_LABEL = { "analog-value": "AV", "binary-value": "BV", "multistate-value": "MSV" };
+      const UNITS = [
+        [95, "no units"], [98, "percent"], [62, "degrees Celsius"], [64, "degrees Fahrenheit"],
+        [29, "percent relative humidity"], [96, "parts per million"], [37, "lux"], [47, "watts"],
+        [48, "kilowatts"], [19, "kilowatt hours"], [5, "volts"], [3, "amperes"], [27, "hertz"],
+        [53, "pascals"], [133, "hectopascals"], [31, "meters"], [74, "meters per second"],
+        [75, "kilometers per hour"], [87, "liters per second"], [90, "degrees (angular)"], [73, "seconds"],
+        [72, "minutes"], [71, "hours"], [199, "decibels"], [100, "per minute"], [131, "per hour"],
+      ];
+      const NAMESPACES = {
+        "http://www.onvif.org/ver10/topics": "tns1",
+        "http://www.axis.com/2009/event/topics": "tnsaxis",
+      };
+      const WSTOP = "http://docs.oasis-open.org/wsn/t-1";
+      const AEV = "http://www.axis.com/vapix/ws/event1";
+
+      let objects = [];
+      let events = [];
+      let editing = -1;
+      let eventsReady = null;
+
+      const storedTheme = localStorage.getItem(APP + ".theme");
+      if (storedTheme) document.documentElement.setAttribute("data-theme", storedTheme);
+      $("theme").addEventListener("click", () => {
+        const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem(APP + ".theme", next);
+      });
+
+      function setMsg(id, text, isError) {
+        $(id).textContent = text;
+        $(id).classList.toggle("error", Boolean(isError));
+      }
+
+      function el(tag, text, className) {
+        const node = document.createElement(tag);
+        if (text !== undefined) node.textContent = text;
+        if (className) node.className = className;
+        return node;
+      }
+
+      async function api(path, options) {
+        const response = await fetch("api/" + path, { credentials: "same-origin", ...options });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+        return body;
+      }
+
+      /* ------------------------------------------------------------ device */
+
+      async function loadDevice() {
+        const s = await api("settings");
+        $("Enabled").checked = s.Enabled === "yes";
+        for (const name of ["DeviceInstance", "DeviceName", "UdpPort", "Location", "Description"]) {
+          $(name).value = s[name] || "";
+        }
+        $("DeviceInstance").placeholder = `automatic (${s.effective.DeviceInstance})`;
+        $("DeviceName").placeholder = s.effective.DeviceName;
+      }
+
+      $("device-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const values = { Enabled: $("Enabled").checked ? "yes" : "no" };
+        for (const name of ["DeviceInstance", "DeviceName", "UdpPort", "Location", "Description"]) {
+          values[name] = $(name).value.trim();
+        }
+        if (!values.UdpPort) values.UdpPort = "47808";
+        const body = new URLSearchParams(values).toString();
+        setMsg("device-msg", "Saving...");
+        try {
+          await api("settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+          });
+          setMsg("device-msg", "Saved. The device restarts with the new settings.");
+          setTimeout(refresh, 1500);
+          loadDevice();
+        } catch (error) {
+          setMsg("device-msg", error.message, true);
+        }
+      });
+
+      /* ------------------------------------------------------------ status */
+
+      function renderStatus(status) {
+        const box = $("status");
+        box.replaceChildren();
+        const d = status.device;
+        const stateText = status.running ? "Running" : status.enabled ? "Not running" : "Disabled";
+        const state = el("div");
+        const stateValue = el("div", undefined, "state");
+        stateValue.append(el("span", undefined, "dot " + (status.running ? "ok" : status.error ? "bad" : "")), stateText);
+        state.append(el("span", "Status"), stateValue);
+        box.append(state);
+        const fields = [
+          ["Instance", d.instance],
+          ["Name", d.name],
+          ["Address", d.address ? `${d.address}:${d.port}` : `UDP ${d.port}`],
+          ["Version", d.version],
+        ];
+        for (const [label, value] of fields) {
+          const item = el("div");
+          item.append(el("span", label), el("div", String(value)));
+          box.append(item);
+        }
+        if (status.error) box.append(el("div", status.error, "msg error wide"));
+      }
+
+      /* Readable event name from the camera's declarations, else the topic
+         names without namespaces. */
+      function eventLabel(topic) {
+        const key = topic.join("/");
+        const known = events.find((e) => e.topic.join("/") === key);
+        return known ? known.label : topic.map((t) => t.split(":").pop()).join(" / ");
+      }
+
+      function renderObjects(statusObjects) {
+        const list = $("objects");
+        list.replaceChildren();
+        if (!objects.length) {
+          list.append(el("div", "No objects yet. Add one to publish a camera event over BACnet.", "empty"));
+          return;
+        }
+        objects.forEach((object, index) => {
+          const live = (statusObjects || []).find((s) => s.type === object.type && s.instance === object.instance);
+          const row = el("div", undefined, "object-row");
+
+          const info = el("div");
+          const title = el("div", undefined, "object-title");
+          const health = !live ? "" : live.subscribed && !live.error ? "ok" : "bad";
+          title.append(el("span", undefined, "dot " + health), el("span", `${TYPE_LABEL[object.type]} ${object.instance}`, "badge"),
+            el("strong", object.name));
+          const filter = object.event.source_key ? `, ${object.event.source_key} ${object.event.source_value}` : "";
+          const source = el("div", `${eventLabel(object.event.topic)}${filter} (${object.event.data_key})`, "sub");
+          source.title = object.event.topic.join("/");
+          info.append(title, source);
+
+          const value = el("div");
+          value.append(el("div", live ? live.present_value || "-" : "-", "value"));
+          const last = live && live.last_event_time
+            ? `Last event ${new Date(live.last_event_time * 1000).toLocaleTimeString()}: ${live.last_event_value}`
+            : "No event yet";
+          value.append(el("div", last, "sub"));
+          if (live && live.error) value.append(el("div", live.error, "sub msg error"));
+
+          const actions = el("div", undefined, "row-actions");
+          const edit = el("button", "Edit", "secondary");
+          edit.type = "button";
+          edit.addEventListener("click", () => openEditor(index));
+          const remove = el("button", "Delete", "danger");
+          remove.type = "button";
+          remove.addEventListener("click", () => deleteObject(index));
+          actions.append(edit, remove);
+
+          row.append(info, value, actions);
+          list.append(row);
+        });
+      }
+
+      async function refresh() {
+        try {
+          const status = await api("status");
+          renderStatus(status);
+          renderObjects(status.objects);
+        } catch (error) {
+          $("status").textContent = "Could not load the status: " + error.message;
+        }
+      }
+
+      async function loadObjects() {
+        objects = (await api("objects")).objects;
+      }
+
+      async function saveObjects(list) {
+        await api("objects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ objects: list }),
+        });
+        objects = list;
+        setTimeout(refresh, 700);
+      }
+
+      async function deleteObject(index) {
+        const object = objects[index];
+        if (!confirm(`Delete ${TYPE_LABEL[object.type]} ${object.instance} "${object.name}"?`)) return;
+        const list = objects.filter((_, i) => i !== index);
+        try {
+          await saveObjects(list);
+          setMsg("objects-msg", "Deleted.");
+        } catch (error) {
+          setMsg("objects-msg", error.message, true);
+        }
+      }
+
+      /* ------------------------------------------------------- camera events */
+
+      /* Axis writes deeper topic levels without a namespace; they inherit
+         their parent's (tns1:Device/tnsaxis:IO/VirtualInput is tnsaxis). */
+      function topicNamespace(node, parentNs) {
+        if (node.namespaceURI === null) return parentNs;
+        return NAMESPACES[node.namespaceURI];
+      }
+
+      function simpleItems(parent, kind) {
+        const items = [];
+        for (const instance of parent.getElementsByTagNameNS("*", kind)) {
+          for (const item of instance.getElementsByTagNameNS("*", "SimpleItemInstance")) {
+            items.push({
+              name: item.getAttribute("Name"),
+              type: (item.getAttribute("Type") || "").replace(/^xsd:/, ""),
+              state: item.getAttribute("isPropertyState") === "true",
+              values: [...item.getElementsByTagNameNS("*", "Value")].map((v) => v.textContent),
+            });
+          }
+        }
+        return items;
+      }
+
+      function walkTopics(node, path, labels, out, parentNs) {
+        for (const child of node.children) {
+          const ns = topicNamespace(child, parentNs);
+          if (!ns) continue;
+          const nice = child.getAttributeNS(AEV, "NiceName");
+          const nextPath = [...path, `${ns}:${child.localName}`];
+          const nextLabels = [...labels, nice || child.localName];
+          if (child.getAttributeNS(WSTOP, "topic") === "true") {
+            const message = child.getElementsByTagNameNS("*", "MessageInstance")[0];
+            if (message) {
+              const data = simpleItems(message, "DataInstance");
+              if (data.length) {
+                out.push({
+                  topic: nextPath,
+                  label: nextLabels.join(" / "),
+                  sources: simpleItems(message, "SourceInstance"),
+                  data,
+                });
+              }
+            }
+          }
+          walkTopics(child, nextPath, nextLabels, out, ns);
+        }
+      }
+
+      async function loadEvents() {
+        const soap =
+          '<?xml version="1.0" encoding="utf-8"?>' +
+          '<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"><s:Body>' +
+          '<GetEventInstances xmlns="http://www.axis.com/vapix/ws/event1"/></s:Body></s:Envelope>';
+        try {
+          const response = await fetch("/vapix/services", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/soap+xml; charset=utf-8" },
+            body: soap,
+          });
+          const xml = new DOMParser().parseFromString(await response.text(), "application/xml");
+          const topicSet = xml.getElementsByTagNameNS(WSTOP, "TopicSet")[0];
+          events = [];
+          if (topicSet) walkTopics(topicSet, [], [], events, undefined);
+          events.sort((a, b) => a.label.localeCompare(b.label));
+          $("o-event-hint").textContent = `${events.length} events with data fields on this camera.`;
+        } catch (error) {
+          $("o-event-hint").textContent = "Could not load the camera's events: " + error.message;
+        }
+      }
+
+      function fillEventSelect(topic) {
+        const select = $("o-event");
+        select.replaceChildren(el("option", "Choose an event...", ""));
+        select.options[0].value = "";
+        const key = topic ? topic.join("/") : "";
+        let found = !key;
+        const counts = {};
+        for (const event of events) counts[event.label] = (counts[event.label] || 0) + 1;
+        events.forEach((event, index) => {
+          const path = event.topic.join("/");
+          const option = el("option", counts[event.label] > 1 ? `${event.label} (${path})` : event.label);
+          option.title = path;
+          option.value = String(index);
+          if (event.topic.join("/") === key) {
+            option.selected = true;
+            found = true;
+          }
+          select.append(option);
+        });
+        if (!found) {
+          /* Bound to an event this camera does not declare (any more). */
+          const option = el("option", `${key} (not declared on this camera)`);
+          option.value = "custom";
+          option.dataset.topic = key;
+          option.selected = true;
+          select.append(option);
+        }
+      }
+
+      function selectedEvent() {
+        const value = $("o-event").value;
+        if (value === "" || value === "custom") return null;
+        return events[Number(value)];
+      }
+
+      function fillFieldSelects(sourceKey, sourceValue, dataKey) {
+        const event = selectedEvent();
+        const sources = event ? event.sources : [];
+        const data = event ? event.data : [];
+        const sourceSelect = $("o-source-key");
+        sourceSelect.replaceChildren(el("option", "(any)"));
+        sourceSelect.options[0].value = "";
+        for (const item of sources) {
+          const option = el("option", item.name);
+          option.value = item.name;
+          sourceSelect.append(option);
+        }
+        if (sourceKey && !sources.some((s) => s.name === sourceKey)) {
+          const option = el("option", sourceKey);
+          option.value = sourceKey;
+          sourceSelect.append(option);
+        }
+        sourceSelect.value = sourceKey || (sources[0] ? sources[0].name : "");
+        $("o-source-value").value = sourceValue || "";
+        fillSourceValues();
+
+        const dataSelect = $("o-data-key");
+        dataSelect.replaceChildren();
+        for (const item of data) {
+          const option = el("option", `${item.name} (${item.type}${item.state ? ", state" : ""})`);
+          option.value = item.name;
+          dataSelect.append(option);
+        }
+        if (dataKey && !data.some((d) => d.name === dataKey)) {
+          const option = el("option", dataKey);
+          option.value = dataKey;
+          dataSelect.append(option);
+        }
+        if (dataKey) dataSelect.value = dataKey;
+      }
+
+      function fillSourceValues() {
+        const event = selectedEvent();
+        const source = event && event.sources.find((s) => s.name === $("o-source-key").value);
+        const list = $("o-source-values");
+        list.replaceChildren();
+        for (const value of source ? source.values : []) {
+          const option = el("option");
+          option.value = value;
+          list.append(option);
+        }
+        if (source && source.values.length && !$("o-source-value").value) $("o-source-value").value = source.values[0];
+      }
+
+      $("o-event").addEventListener("change", () => fillFieldSelects("", "", ""));
+      $("o-source-key").addEventListener("change", () => {
+        $("o-source-value").value = "";
+        fillSourceValues();
+      });
+
+      /* ------------------------------------------------------------ editor */
+
+      function showKind() {
+        const type = $("o-type").value;
+        for (const node of document.querySelectorAll(".kind")) {
+          node.classList.toggle("hidden", !node.classList.contains(type));
+        }
+      }
+      $("o-type").addEventListener("change", () => {
+        showKind();
+        if (editing < 0) $("o-instance").value = nextInstance($("o-type").value);
+      });
+
+      function nextInstance(type) {
+        const used = new Set(objects.filter((o) => o.type === type).map((o) => o.instance));
+        let instance = 1;
+        while (used.has(instance)) instance++;
+        return instance;
+      }
+
+      function fillUnits(selected) {
+        const select = $("o-units");
+        select.replaceChildren();
+        const list = UNITS.some(([value]) => value === selected) ? UNITS : [...UNITS, [selected, `units ${selected}`]];
+        for (const [value, label] of list) {
+          const option = el("option", label);
+          option.value = String(value);
+          select.append(option);
+        }
+        select.value = String(selected);
+      }
+
+      async function openEditor(index) {
+        $("editor").classList.remove("hidden");
+        await eventsReady;
+        editing = index;
+        const object = index >= 0
+          ? objects[index]
+          : { type: "binary-value", instance: nextInstance("binary-value"), name: "", description: "", event: { topic: [] } };
+        $("editor-title").textContent = index >= 0 ? `Edit ${TYPE_LABEL[object.type]} ${object.instance}` : "Add object";
+        $("o-type").value = object.type;
+        $("o-instance").value = object.instance;
+        $("o-name").value = object.name;
+        $("o-description").value = object.description || "";
+        fillUnits(object.units ?? 95);
+        $("o-cov").value = object.cov_increment ?? 0;
+        $("o-active-text").value = object.active_text || "";
+        $("o-inactive-text").value = object.inactive_text || "";
+        $("o-invert").checked = Boolean(object.invert);
+        $("o-states").value = (object.states || []).join("\n");
+        fillEventSelect(object.event.topic.length ? object.event.topic : null);
+        fillFieldSelects(object.event.source_key, object.event.source_value, object.event.data_key);
+        showKind();
+        setMsg("editor-msg", "");
+        $("editor").classList.remove("hidden");
+        $("editor").scrollIntoView({ behavior: "smooth" });
+      }
+
+      $("add").addEventListener("click", () => openEditor(-1));
+      $("cancel").addEventListener("click", () => $("editor").classList.add("hidden"));
+
+      $("object-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const type = $("o-type").value;
+        const selected = $("o-event").selectedOptions[0];
+        let topic = [];
+        if (selected && selected.value === "custom") topic = selected.dataset.topic.split("/");
+        else if (selectedEvent()) topic = selectedEvent().topic;
+        if (!topic.length) {
+          setMsg("editor-msg", "Choose a camera event.", true);
+          return;
+        }
+        const object = {
+          type,
+          instance: Number($("o-instance").value),
+          name: $("o-name").value.trim(),
+          description: $("o-description").value.trim(),
+          event: {
+            topic,
+            source_key: $("o-source-key").value,
+            source_value: $("o-source-key").value ? $("o-source-value").value.trim() : "",
+            data_key: $("o-data-key").value,
+          },
+        };
+        if (type === "analog-value") {
+          object.units = Number($("o-units").value);
+          object.cov_increment = Number($("o-cov").value || 0);
+        } else if (type === "binary-value") {
+          object.active_text = $("o-active-text").value.trim();
+          object.inactive_text = $("o-inactive-text").value.trim();
+          object.invert = $("o-invert").checked;
+        } else {
+          object.states = $("o-states").value.split("\n").map((s) => s.trim()).filter(Boolean);
+        }
+        const list = objects.slice();
+        if (editing >= 0) list[editing] = object;
+        else list.push(object);
+        setMsg("editor-msg", "Saving...");
+        try {
+          await saveObjects(list);
+          $("editor").classList.add("hidden");
+          setMsg("objects-msg", "Saved.");
+        } catch (error) {
+          /* Errors name the list index; this object is at editing or the end. */
+          setMsg("editor-msg", error.message, true);
+        }
+      });
+
+      /* -------------------------------------------------------------- start */
+
+      (async () => {
+        try {
+          await Promise.all([loadDevice(), loadObjects()]);
+        } catch (error) {
+          setMsg("device-msg", "Could not load the settings: " + error.message, true);
+        }
+        eventsReady = loadEvents().then(refresh);
+        await refresh();
+        setInterval(refresh, 5000);
+      })();
+    </script>
+  </body>
+</html>
